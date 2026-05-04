@@ -23,7 +23,7 @@
           :key="item.path"
           :to="item.path"
           :class="['sidebar-nav-item', { active: $route.path === item.path }]"
-          :title="sidebarCollapsed ? (item.labelKey === 'reports' ? 'Reports' : t(item.labelKey)) : undefined"
+          :title="sidebarCollapsed ? t(item.labelKey) : undefined"
         >
           <!-- grid -->
           <svg v-if="item.icon === 'grid'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -54,7 +54,7 @@
             <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
           </svg>
 
-          <span class="nav-label">{{ item.labelKey === 'reports' ? 'Reports' : item.labelKey === 'restocking' ? 'Restocking' : t(item.labelKey) }}</span>
+          <span class="nav-label">{{ t(item.labelKey) }}</span>
         </router-link>
       </nav>
 
@@ -130,8 +130,8 @@ export default {
       { path: '/orders',    labelKey: 'nav.orders',         icon: 'clipboard' },
       { path: '/spending',  labelKey: 'nav.finance',        icon: 'currency' },
       { path: '/demand',    labelKey: 'nav.demandForecast', icon: 'trend' },
-      { path: '/reports',     labelKey: 'reports',      icon: 'report' },
-      { path: '/restocking',  labelKey: 'restocking',   icon: 'cart' },
+      { path: '/reports',     labelKey: 'nav.reports',      icon: 'report' },
+      { path: '/restocking',  labelKey: 'nav.restocking',   icon: 'cart' },
     ]
 
     const userInitials = computed(() =>

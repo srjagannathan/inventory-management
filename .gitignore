@@ -52,3 +52,6 @@ logs/
 
 # Environment variables
 .env
+
+# Skill eval workspaces (benchmark runs, reports, viewer HTML)
+.claude/skills/*-workspace/

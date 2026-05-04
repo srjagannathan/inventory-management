@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(uv run *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(pip3 install *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(lsof -ti:8001)",
+      "Bash(lsof -ti:3000,8001)",
+      "Bash(xargs kill *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in *.py) python3 -m py_compile \"$f\" 2>&1 ;; esac; }",
+            "timeout": 10,
+            "statusMessage": "Checking Python syntax..."
+          }
+        ]
+      }
+    ]
+  }
+}

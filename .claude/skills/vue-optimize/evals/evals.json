@@ -1,0 +1,26 @@
+{
+  "skill_name": "vue-optimize",
+  "evals": [
+    {
+      "id": 0,
+      "name": "single-file",
+      "prompt": "Take a look at client/src/views/Dashboard.vue and tell me if there's anything I should clean up or speed up. It feels a bit sluggish when I switch filters.",
+      "expected_output": "A structured report with severity-tagged findings, file/line citations, snippets, fixes, and impact estimates — focused on Dashboard.vue only.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "cross-file-reuse",
+      "prompt": "I keep noticing the modal components feel similar. Can you scan client/src/components/ for code we should pull into shared components or composables?",
+      "expected_output": "A report that emphasizes cross-file duplication — at minimum identifies the *DetailModal.vue family as candidates for a shared composable or base component, with concrete file paths and line ranges.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "whole-tree-audit",
+      "prompt": "Do a frontend audit of client/src — performance issues, reactivity bugs, anything that should move to a composable. Give me a prioritized list.",
+      "expected_output": "A prioritized report covering both views and components, with a Summary that names the top 1-3 themes, severity-ranked findings, and a Cross-file opportunities section. Should specifically catch :key=\"index\" usages and any local filter state that bypasses useFilters.",
+      "files": []
+    }
+  ]
+}
