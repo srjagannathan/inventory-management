@@ -6,6 +6,8 @@ export default {
     orders: '注文',
     finance: '財務',
     demandForecast: '需要予測',
+    reports: 'レポート',
+    restocking: '補充',
     companyName: '触媒コンポーネンツ',
     subtitle: '在庫管理システム'
   },
@@ -309,6 +311,52 @@ export default {
     english: 'English',
     japanese: '日本語',
     selectLanguage: '言語を選択'
+  },
+
+  // Reports
+  reports: {
+    title: 'パフォーマンスレポート',
+    description: '四半期パフォーマンス指標と月次トレンドの確認',
+    quarterlyPerformance: {
+      title: '四半期パフォーマンス',
+      quarter: '四半期',
+      totalOrders: '総注文数',
+      totalRevenue: '総収益',
+      avgOrderValue: '平均注文額',
+      fulfillmentRate: '履行率'
+    },
+    monthlyRevenueTrend: {
+      title: '月次収益トレンド'
+    },
+    monthOverMonth: {
+      title: '前月比分析',
+      month: '月',
+      orders: '注文数',
+      revenue: '収益',
+      change: '変化',
+      growthRate: '成長率'
+    },
+    summary: {
+      totalRevenueYTD: '総収益（年初来）',
+      avgMonthlyRevenue: '月平均収益',
+      totalOrdersYTD: '総注文数（年初来）',
+      bestPerformingQuarter: '最高パフォーマンス四半期'
+    }
+  },
+
+  // Backlog
+  backlog: {
+    title: 'バックログ管理',
+    subtitle: '在庫不足の追跡と解決',
+    loading: 'バックログを読み込み中...',
+    tableTitle: 'バックログアイテム',
+    noBacklog: 'バックログアイテムなし - すべての注文を履行できます！',
+    stats: {
+      highPriority: '高優先度',
+      mediumPriority: '中優先度',
+      lowPriority: '低優先度',
+      total: 'バックログアイテム合計'
+    }
   },
 
   // Common

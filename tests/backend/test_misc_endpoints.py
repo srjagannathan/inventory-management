@@ -135,6 +135,122 @@ class TestBacklogEndpoints:
         for item in data:
             assert item["days_delayed"] >= 0
 
+    # ---- Filter behavior (added when /api/backlog gained warehouse/category) ----
+
+    def test_backlog_no_filters_returns_all(self, client):
+        """Test that /api/backlog with no filters returns the full set."""
+        baseline = client.get("/api/backlog").json()
+        with_all = client.get("/api/backlog?warehouse=all&category=all").json()
+        assert baseline == with_all
+        assert len(baseline) > 0
+
+    def test_backlog_filter_by_warehouse(self, client):
+        """Test that warehouse filter narrows backlog correctly via SKU-join.
+
+        The invariant: every item in the filtered response must have a SKU that
+        exists in that warehouse's inventory. With seed data where no backlog
+        SKUs exist in any inventory, the result will be empty — which is the
+        correct behavior (matches Dashboard.vue's existing client-side filter).
+        """
+        all_inventory = client.get("/api/inventory").json()
+        warehouses = {inv["warehouse"] for inv in all_inventory}
+        assert len(warehouses) > 0
+
+        for warehouse in warehouses:
+            response = client.get(f"/api/backlog?warehouse={warehouse}")
+            assert response.status_code == 200
+            filtered = response.json()
+
+            warehouse_skus = {
+                inv["sku"] for inv in all_inventory if inv["warehouse"] == warehouse
+            }
+            for item in filtered:
+                assert item["item_sku"] in warehouse_skus, (
+                    f"Backlog item {item['id']} (SKU {item['item_sku']}) "
+                    f"survived warehouse={warehouse} filter but its SKU isn't in that warehouse"
+                )
+
+    def test_backlog_filter_by_category(self, client):
+        """Test that category filter narrows backlog correctly via SKU-join."""
+        all_inventory = client.get("/api/inventory").json()
+        categories = {inv["category"] for inv in all_inventory}
+        assert len(categories) > 0
+
+        for category in categories:
+            response = client.get(f"/api/backlog?category={category}")
+            assert response.status_code == 200
+            filtered = response.json()
+
+            category_skus = {
+                inv["sku"] for inv in all_inventory
+                if inv["category"].lower() == category.lower()
+            }
+            for item in filtered:
+                assert item["item_sku"] in category_skus
+
+    def test_backlog_combined_warehouse_and_category(self, client):
+        """Test that warehouse + category compose as the SKU-set intersection."""
+        all_inventory = client.get("/api/inventory").json()
+        # Pick the first inventory row to seed the combined filter
+        seed = all_inventory[0]
+        warehouse, category = seed["warehouse"], seed["category"]
+
+        response = client.get(
+            f"/api/backlog?warehouse={warehouse}&category={category}"
+        )
+        assert response.status_code == 200
+        filtered = response.json()
+
+        # Every returned item's SKU must be in inventory rows matching BOTH filters
+        target_skus = {
+            inv["sku"] for inv in all_inventory
+            if inv["warehouse"] == warehouse
+            and inv["category"].lower() == category.lower()
+        }
+        for item in filtered:
+            assert item["item_sku"] in target_skus
+
+    def test_backlog_orphaned_skus_excluded_when_filtered(self, client):
+        """Test that backlog items whose SKU is absent from inventory get hidden under any filter.
+
+        Documents the project's existing semantic: when a warehouse/category
+        filter is active, backlog items that can't be SKU-joined to inventory
+        are excluded. This matches Dashboard.vue's client-side filter.
+        """
+        full_backlog = client.get("/api/backlog").json()
+        all_inventory = client.get("/api/inventory").json()
+        inv_skus = {inv["sku"] for inv in all_inventory}
+        orphaned = {b["item_sku"] for b in full_backlog if b["item_sku"] not in inv_skus}
+
+        # If the seed data has no orphaned SKUs this test is trivially satisfied;
+        # if it has some (current state), they must not appear under any filter.
+        if not orphaned:
+            return
+
+        # Pick any real warehouse — none of its results should reference orphaned SKUs
+        warehouse = next(iter(inv_skus and {inv["warehouse"] for inv in all_inventory}))
+        filtered = client.get(f"/api/backlog?warehouse={warehouse}").json()
+        for item in filtered:
+            assert item["item_sku"] not in orphaned
+
+    def test_backlog_unmatched_warehouse_returns_empty(self, client):
+        """Test that a warehouse with no matching inventory yields no backlog items."""
+        response = client.get("/api/backlog?warehouse=Mars")
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_backlog_filter_preserves_has_purchase_order_flag(self, client):
+        """Test that filtered results still carry the has_purchase_order field."""
+        # Use the unfiltered call to find a real warehouse
+        all_inv = client.get("/api/inventory").json()
+        warehouse = all_inv[0]["warehouse"]
+
+        response = client.get(f"/api/backlog?warehouse={warehouse}")
+        for item in response.json():
+            # Field must always be present even when the filter narrows the list
+            assert "has_purchase_order" in item
+            assert isinstance(item["has_purchase_order"], bool)
+
 
 class TestSpendingEndpoints:
     """Test suite for spending-related endpoints."""

@@ -189,17 +189,40 @@ def get_demand_forecasts():
     return demand_forecasts
 
 @app.get("/api/backlog", response_model=List[BacklogItem])
-def get_backlog():
-    """Get backlog items with purchase order status"""
+def get_backlog(
+    warehouse: Optional[str] = None,
+    category: Optional[str] = None
+):
+    """Get backlog items with purchase order status.
+
+    Backlog items don't carry warehouse/category directly — they reference
+    inventory by SKU. So filtering means: narrow inventory by warehouse+category,
+    build a SKU set, and keep only backlog items whose item_sku is in that set.
+
+    With no filters the behavior is identical to before. status/month aren't
+    accepted because backlog items aren't orders — they have no status field
+    and no order_date.
+    """
     # Add has_purchase_order flag to each backlog item
     result = []
     for item in backlog_items:
         item_dict = dict(item)
-        # Check if this backlog item has a purchase order
         has_po = any(po["backlog_item_id"] == item["id"] for po in purchase_orders)
         item_dict["has_purchase_order"] = has_po
         result.append(item_dict)
-    return result
+
+    # If neither filter is active, return everything unchanged.
+    warehouse_active = warehouse and warehouse != "all"
+    category_active = category and category != "all"
+    if not warehouse_active and not category_active:
+        return result
+
+    # Otherwise narrow inventory through apply_filters() and keep only backlog
+    # items whose SKU matches an inventory row that survived the filter. This
+    # mirrors the join the frontend used to do client-side.
+    filtered_inventory = apply_filters(inventory_items, warehouse, category)
+    valid_skus = {inv["sku"] for inv in filtered_inventory}
+    return [b for b in result if b["item_sku"] in valid_skus]
 
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(
@@ -250,12 +273,26 @@ def get_recent_transactions():
     return recent_transactions
 
 @app.get("/api/reports/quarterly")
-def get_quarterly_reports():
-    """Get quarterly performance reports"""
+def get_quarterly_reports(
+    warehouse: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    month: Optional[str] = None
+):
+    """Get quarterly performance reports.
+
+    Filters narrow the underlying orders before aggregation, so e.g. selecting
+    `month=Q1-2025` returns only the Q1 row, `warehouse=Tokyo` returns quarterly
+    stats computed from Tokyo's orders only, and so on. With no filters the
+    behavior is identical to before.
+    """
+    filtered_orders = apply_filters(orders, warehouse, category, status)
+    filtered_orders = filter_by_month(filtered_orders, month)
+
     # Calculate quarterly statistics from orders
     quarters = {}
 
-    for order in orders:
+    for order in filtered_orders:
         order_date = order.get('order_date', '')
         # Determine quarter
         if '2025-01' in order_date or '2025-02' in order_date or '2025-03' in order_date:
@@ -296,11 +333,23 @@ def get_quarterly_reports():
     return result
 
 @app.get("/api/reports/monthly-trends")
-def get_monthly_trends():
-    """Get month-over-month trends"""
+def get_monthly_trends(
+    warehouse: Optional[str] = None,
+    category: Optional[str] = None,
+    status: Optional[str] = None,
+    month: Optional[str] = None
+):
+    """Get month-over-month trends.
+
+    Filters narrow the underlying orders before aggregation. With no filters
+    the behavior is identical to before.
+    """
+    filtered_orders = apply_filters(orders, warehouse, category, status)
+    filtered_orders = filter_by_month(filtered_orders, month)
+
     months = {}
 
-    for order in orders:
+    for order in filtered_orders:
         order_date = order.get('order_date', '')
         if not order_date:
             continue
